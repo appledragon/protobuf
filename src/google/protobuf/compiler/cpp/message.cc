@@ -247,7 +247,7 @@ bool EmitFieldNonDefaultCondition(io::Printer* printer,
           "memcpy(&raw_$name$, &tmp_$name$, sizeof(tmp_$name$));\n"
           "if (raw_$name$ != 0) {\n");
     } else {
-      format("if ($prefix$_internal_$name$() != 0) {\n");
+      format("if (static_cast<int>($prefix$_internal_$name$()) != 0) {\n");
     }
     format.Indent();
     return true;

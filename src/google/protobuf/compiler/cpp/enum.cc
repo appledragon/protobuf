@@ -37,6 +37,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <regex>
 
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/stubs/strutil.h>
@@ -89,13 +90,19 @@ EnumGenerator::EnumGenerator(const EnumDescriptor* descriptor,
   variables_["resolved_name"] = ResolveKeyword(descriptor_->name());
   variables_["prefix"] =
       (descriptor_->containing_type() == nullptr) ? "" : classname_ + "_";
+
+  // replace "." to "::" in full_name
+  variables_["full_name"] = descriptor_->full_name();
+  const std::regex dotRegex("\\.");
+  variables_["full_name"] = std::regex_replace(variables_["full_name"], dotRegex, "::");
+  //std::cout << variables_["prefix"] << std::endl;
 }
 
 EnumGenerator::~EnumGenerator() {}
 
 void EnumGenerator::GenerateDefinition(io::Printer* printer) {
-  Formatter format(printer, variables_);
-  format("enum ${1$$classname$$}$ : int {\n", descriptor_);
+	const Formatter format(printer, variables_);
+  format("enum class ${1$$classname$$}$ : int {\n", descriptor_);
   format.Indent();
 
   const EnumValueDescriptor* min_value = descriptor_->value(0);
@@ -140,18 +147,53 @@ void EnumGenerator::GenerateDefinition(io::Printer* printer) {
   format(
       "$dllexport_decl $bool $classname$_IsValid(int value);\n"
       "constexpr $classname$ ${1$$prefix$$short_name$_MIN$}$ = "
-      "$prefix$$2$;\n"
+      "$classname$::$prefix$$2$;\n"
       "constexpr $classname$ ${1$$prefix$$short_name$_MAX$}$ = "
-      "$prefix$$3$;\n",
+      "$classname$::$prefix$$3$;\n",
       descriptor_, EnumValueName(min_value), EnumValueName(max_value));
 
   if (generate_array_size_) {
     format(
         "constexpr int ${1$$prefix$$short_name$_ARRAYSIZE$}$ = "
-        "$prefix$$short_name$_MAX + 1;\n\n",
+        "static_cast<int>($prefix$$short_name$_MAX) + 1;\n\n",
         descriptor_);
   }
 
+  // generate operator<<
+  format(
+      "inline std::ostream& operator<<(std::ostream& o, $classname$ j)\n"
+      "{\n"
+      "    o << static_cast<int>(j);\n"
+      "    return o;\n"
+      "}\n");
+      
+  // generate operator&
+  format(
+      "inline $classname$ operator&($classname$ j, $classname$ k)\n"
+      "{\n"
+      "    return static_cast<$classname$>(static_cast<int>(j) & static_cast<int>(k));\n"
+      "}\n");
+      
+  // generate operator|
+  format(
+      "inline $classname$ operator|($classname$ j, $classname$ k)\n"
+      "{\n"
+      "    return static_cast<$classname$>(static_cast<int>(j) | static_cast<int>(k));\n"
+      "}\n");
+
+   // generate operator==
+  format(
+      "inline bool operator==($classname$ j, $classname$ k)\n"
+      "{\n"
+      "    return static_cast<int>(j) == static_cast<int>(k);\n"
+      "}\n");
+   // generate operator!=
+  format(
+      "inline bool operator!=($classname$ j, $classname$ k)\n"
+      "{\n"
+      "    return static_cast<int>(j) != static_cast<int>(k);\n"
+      "}\n");
+      
   if (HasDescriptorMethods(descriptor_->file(), options_)) {
     format(
         "$dllexport_decl $const ::$proto_ns$::EnumDescriptor* "
@@ -222,7 +264,7 @@ void EnumGenerator::GenerateSymbolImports(io::Printer* printer) const {
         DeprecatedAttribute(options_, descriptor_->value(j));
     format(
         "$1$static constexpr $resolved_name$ ${2$$3$$}$ =\n"
-        "  $classname$_$3$;\n",
+        "  $classname$::$classname$_$3$;\n",
         deprecated_attr, descriptor_->value(j),
         EnumValueName(descriptor_->value(j)));
   }
@@ -384,7 +426,7 @@ void EnumGenerator::GenerateMethods(int idx, io::Printer* printer) {
         "  int idx = ::$proto_ns$::internal::LookUpEnumName(\n"
         "      $classname$_entries,\n"
         "      $classname$_entries_by_number,\n"
-        "      $1$, value);\n"
+        "      $1$, static_cast<int>(value));\n"
         "  return idx == -1 ? ::$proto_ns$::internal::GetEmptyString() :\n"
         "                     $classname$_strings[idx].get();\n"
         "}\n",

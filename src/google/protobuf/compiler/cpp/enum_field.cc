@@ -109,7 +109,7 @@ void EnumFieldGenerator::GenerateInlineAccessorDefinitions(
   }
   format(
       "  $set_hasbit$\n"
-      "  $field$ = value;\n"
+      "  $field$ = static_cast<int>(value);\n"
       "}\n"
       "inline void $classname$::set_$name$($type$ value) {\n"
       "$maybe_prepare_split_message$"
@@ -146,14 +146,14 @@ void EnumFieldGenerator::GenerateSerializeWithCachedSizesToArray(
   format(
       "target = stream->EnsureSpace(target);\n"
       "target = ::_pbi::WireFormatLite::WriteEnumToArray(\n"
-      "  $number$, this->_internal_$name$(), target);\n");
+      "  $number$, static_cast<int>(this->_internal_$name$()), target);\n");
 }
 
 void EnumFieldGenerator::GenerateByteSize(io::Printer* printer) const {
   Formatter format(printer, variables_);
   format(
       "total_size += $tag_size$ +\n"
-      "  ::_pbi::WireFormatLite::EnumSize(this->_internal_$name$());\n");
+      "  ::_pbi::WireFormatLite::EnumSize(static_cast<int>(this->_internal_$name$()));\n");
 }
 
 void EnumFieldGenerator::GenerateConstexprAggregateInitializer(
@@ -212,7 +212,7 @@ void EnumOneofFieldGenerator::GenerateInlineAccessorDefinitions(
       "    clear_$oneof_name$();\n"
       "    set_has_$name$();\n"
       "  }\n"
-      "  $field$ = value;\n"
+      "  $field$ = static_cast<int>(value);\n"
       "}\n"
       "inline void $classname$::set_$name$($type$ value) {\n"
       "  _internal_set_$name$(value);\n"
@@ -293,7 +293,7 @@ void RepeatedEnumFieldGenerator::GenerateInlineAccessorDefinitions(
     format("  assert($type$_IsValid(value));\n");
   }
   format(
-      "  $field$.Set(index, value);\n"
+      "  $field$.Set(index, static_cast<int>(value));\n"
       "$annotate_set$"
       "  // @@protoc_insertion_point(field_set:$full_name$)\n"
       "}\n"
@@ -302,7 +302,7 @@ void RepeatedEnumFieldGenerator::GenerateInlineAccessorDefinitions(
     format("  assert($type$_IsValid(value));\n");
   }
   format(
-      "  $field$.Add(value);\n"
+      "  $field$.Add(static_cast<int>(value));\n"
       "}\n"
       "inline void $classname$::add_$name$($type$ value) {\n"
       "  _internal_add_$name$(value);\n"
@@ -375,7 +375,7 @@ void RepeatedEnumFieldGenerator::GenerateSerializeWithCachedSizesToArray(
         "for (int i = 0, n = this->_internal_$name$_size(); i < n; i++) {\n"
         "  target = stream->EnsureSpace(target);\n"
         "  target = ::_pbi::WireFormatLite::WriteEnumToArray(\n"
-        "      $number$, this->_internal_$name$(i), target);\n"
+        "      $number$, static_cast<int>(this->_internal_$name$(i)), target);\n"
         "}\n");
   }
 }
@@ -389,9 +389,9 @@ void RepeatedEnumFieldGenerator::GenerateByteSize(io::Printer* printer) const {
       "int>(this->_internal_$name$_size());");
   format.Indent();
   format(
-      "for (unsigned int i = 0; i < count; i++) {\n"
+      "\nfor (unsigned int i = 0; i < count; i++) {\n"
       "  data_size += ::_pbi::WireFormatLite::EnumSize(\n"
-      "    this->_internal_$name$(static_cast<int>(i)));\n"
+      "    static_cast<int>(this->_internal_$name$(i)));\n"
       "}\n");
 
   if (descriptor_->is_packed()) {
