@@ -1,5 +1,5 @@
-Protocol Buffers - Google's data interchange format
-===================================================
+Protocol Buffers - Google's data interchange format (3.21.9 with enum class support)
+====================================================================================
 
 Copyright 2008 Google Inc.
 
